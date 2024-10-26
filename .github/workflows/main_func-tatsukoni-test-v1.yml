@@ -44,6 +44,7 @@ jobs:
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_90C1CBF682864E7FBB49C5202B3BC83C }}
 
   disable-slot:
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: "Login via Azure CLI"
@@ -78,6 +79,7 @@ jobs:
             az logout
 
   swap:
+    needs: [build, disable-slot]
     runs-on: ubuntu-latest
     steps:
       - name: "Login via Azure CLI"
