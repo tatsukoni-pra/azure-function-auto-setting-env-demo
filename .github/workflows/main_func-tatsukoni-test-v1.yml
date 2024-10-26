@@ -9,6 +9,10 @@ on:
 env:
   AZURE_FUNCTIONAPP_PACKAGE_PATH: '.' # set this to the path to your web app project, defaults to the repository root
   NODE_VERSION: '20.x' # set this to the node version to use (supports 8.x, 10.x, 12.x)
+  RESOURCE_GROUP_NAME: "tatsukoni-test-v2"
+  FUNCTION_APP_NAME: "func-tatsukoni-test-v1"
+  SLOT_NAME: "staging"
+  SUBSCRIPTION_ID: "ba29533e-1e4c-43a8-898a-a5815e9b577b"
 
 jobs:
   build:
@@ -34,7 +38,66 @@ jobs:
         uses: Azure/functions-action@v1
         id: fa
         with:
-          app-name: 'func-tatsukoni-test-v1'
-          slot-name: 'staging'
+          app-name: ${{ env.FUNCTION_APP_NAME }}
+          slot-name: ${{ env.SLOT_NAME }}
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_90C1CBF682864E7FBB49C5202B3BC83C }}
+
+  disable-slot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Login via Azure CLI"
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_FUNC_TATSUKONI_TEST_V1 }}
+
+      - name: 'Disable Slot'
+        uses: Azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            STAGIND_FUNCTIONS=$(az rest --method get --uri "https://management.azure.com/subscriptions/${{ env.SUBSCRIPTION_ID }}/resourceGroups/${{ env.RESOURCE_GROUP_NAME }}/providers/Microsoft.Web/sites/${{ env.FUNCTION_APP_NAME }}/slots/${{ env.SLOT_NAME }}/functions?api-version=2018-11-01" | \
+              jq -r '.value[] | select(all(.properties.config.bindings[].type; . != "httpTrigger")) | .properties.name')
+
+            SLOT_SETTINGS=$(echo "$FUNCTIONS" | while read -r func; do
+              echo "AzureWebJobs.${func}.Disabled=true "
+            done)
+            SLOT_SETTINGS=$(echo $SLOT_SETTINGS | sed -e 's/[[:space:]]*$//')
+
+            az functionapp config appsettings set \
+              --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
+              --name ${{ env.FUNCTION_APP_NAME }} \
+              --slot ${{ env.SLOT_NAME }} \
+              --slot-settings $SLOT_SETTINGS
+
+      - name: "Logout via Azure CLI"
+        uses: Azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az logout
+
+  swap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Login via Azure CLI"
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_FUNC_TATSUKONI_TEST_V1 }}
+
+      - name: 'Swap Slot'
+        uses: Azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az webapp deployment slot swap \
+              --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
+              --name ${{ env.FUNCTION_APP_NAME }} \
+              --slot ${{ env.SLOT_NAME }}
+
+      - name: "Logout via Azure CLI"
+        uses: Azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az logout
