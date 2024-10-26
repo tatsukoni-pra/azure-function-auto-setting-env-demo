@@ -60,16 +60,20 @@ jobs:
             STAGIND_FUNCTIONS=$(az rest --method get --uri "https://management.azure.com/subscriptions/${{ env.SUBSCRIPTION_ID }}/resourceGroups/${{ env.RESOURCE_GROUP_NAME }}/providers/Microsoft.Web/sites/${{ env.FUNCTION_APP_NAME }}/slots/${{ env.SLOT_NAME }}/functions?api-version=2018-11-01" | \
               jq -r '.value[] | select(all(.properties.config.bindings[].type; . != "httpTrigger")) | .properties.name')
 
-            SLOT_SETTINGS=$(echo "$FUNCTIONS" | while read -r func; do
-              echo "AzureWebJobs.${func}.Disabled=true "
-            done)
-            SLOT_SETTINGS=$(echo $SLOT_SETTINGS | sed -e 's/[[:space:]]*$//')
+            if [ -n "$STAGIND_FUNCTIONS" ]; then
+              SLOT_SETTINGS=$(echo "$FUNCTIONS" | while read -r func; do
+                echo "AzureWebJobs.${func}.Disabled=true "
+              done)
+              SLOT_SETTINGS=$(echo $SLOT_SETTINGS | sed -e 's/[[:space:]]*$//')
 
-            az functionapp config appsettings set \
-              --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
-              --name ${{ env.FUNCTION_APP_NAME }} \
-              --slot ${{ env.SLOT_NAME }} \
-              --slot-settings $SLOT_SETTINGS
+              echo "target settings: $SLOT_SETTINGS"
+
+              az functionapp config appsettings set \
+                --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
+                --name ${{ env.FUNCTION_APP_NAME }} \
+                --slot ${{ env.SLOT_NAME }} \
+                --slot-settings $SLOT_SETTINGS
+            fi
 
       - name: "Logout via Azure CLI"
         uses: Azure/cli@v2
