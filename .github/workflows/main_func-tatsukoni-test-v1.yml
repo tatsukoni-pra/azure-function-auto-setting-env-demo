@@ -57,15 +57,13 @@ jobs:
         with:
           azcliversion: latest
           inlineScript: |
-            az rest --method get --uri "https://management.azure.com/subscriptions/${{ env.SUBSCRIPTION_ID }}/resourceGroups/${{ env.RESOURCE_GROUP_NAME }}/providers/Microsoft.Web/sites/${{ env.FUNCTION_APP_NAME }}/slots/${{ env.SLOT_NAME }}/functions?api-version=2018-11-01"
-
             STAGIND_FUNCTIONS=$(az rest --method get --uri "https://management.azure.com/subscriptions/${{ env.SUBSCRIPTION_ID }}/resourceGroups/${{ env.RESOURCE_GROUP_NAME }}/providers/Microsoft.Web/sites/${{ env.FUNCTION_APP_NAME }}/slots/${{ env.SLOT_NAME }}/functions?api-version=2018-11-01" | \
               jq -r '.value[] | select(all(.properties.config.bindings[].type; . != "httpTrigger")) | .properties.name')
 
             echo "staging functions: $STAGIND_FUNCTIONS"
 
             if [ -n "$STAGIND_FUNCTIONS" ]; then
-              SLOT_SETTINGS=$(echo "$FUNCTIONS" | while read -r func; do
+              SLOT_SETTINGS=$(echo "$STAGIND_FUNCTIONS" | while read -r func; do
                 echo "AzureWebJobs.${func}.Disabled=true "
               done)
               SLOT_SETTINGS=$(echo $SLOT_SETTINGS | sed -e 's/[[:space:]]*$//')
