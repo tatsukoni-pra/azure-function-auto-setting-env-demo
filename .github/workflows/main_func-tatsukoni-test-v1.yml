@@ -14,6 +14,10 @@ env:
   SLOT_NAME: "staging"
   SUBSCRIPTION_ID: "ba29533e-1e4c-43a8-898a-a5815e9b577b"
 
+concurrency:
+  group: deploy_func-tatsukoni-test-v1
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
