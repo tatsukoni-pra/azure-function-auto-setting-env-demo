@@ -16,7 +16,9 @@ env:
 
 concurrency:
   group: deploy_func-tatsukoni-test-v1
-  cancel-in-progress: false
+  # cancel-in-progress: false 時の場合、現在実行中のワークフローが完了するまで、最新のワークフローが待機される(最新以外のワークフローは実行キャンセルされる)
+  # cancel-in-progress: true 時の場合、同じワークフローが実行中の場合、現在実行中のワークフローが破棄され、最新のワークフローが実行される
+  cancel-in-progress: true
 
 jobs:
   build:
